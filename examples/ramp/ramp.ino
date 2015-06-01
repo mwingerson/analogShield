@@ -34,6 +34,7 @@
 /*                                                                      */
 /*  09/01/2013 (W. Esposito): created                                   */
 /*  05/28/2014 (MWingerson): Updated for ChipKIT and release            */
+/*  06/01/2015 (GCone): Changed order of includes for DUE support       */
 /*                                                                      */
 /************************************************************************/
 
@@ -41,13 +42,21 @@
 /*  Board Support:                                                      */
 /*                                                                      */
 /*      Arduino UNO                                                     */
+/*      Arduino DUE                                                     */
 /*      ChipKIT UNO32                                                   */
 /*      ChipKit UC32                                                    */
 /*                                                                      */
 /************************************************************************/
 
+/*
+For Arduino DUE using Arduino IDE, SPI needs to be included before 
+analogShield.  analogShield calls SPI.begin during constructor 
+thus SPI needs to be constructed before analogShield
+changing the order of includes influenced the link order and 
+thus the order of global variable construction.
+*/
+#include <SPI.h>	//required for ChipKIT and Arduino DUE 
 #include <analogShield.h>   //Include to use analog shield.
-#include <SPI.h>	//required for ChipKIT but does not affect Arduino
 
 void setup()
 {
