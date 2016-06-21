@@ -35,7 +35,8 @@
 /*  09/01/2013 (W. Esposito): created                                   */
 /*  05/28/2014 (MWingerson): Updated for ChipKIT and release            */
 /*  06/01/2015 (GCone): Changed order of includes for DUE support       */
-/*                                                                      */
+/*  06/20/2016(JonP): Added ChipKIT WI-Fire(PIC32MZ)                    */
+/*																		*/	
 /************************************************************************/
 
 /************************************************************************/
@@ -45,6 +46,7 @@
 /*      Arduino DUE                                                     */
 /*      ChipKIT UNO32                                                   */
 /*      ChipKit UC32                                                    */
+/*      ChipKIT Wi-Fire                                                 */
 /*                                                                      */
 /************************************************************************/
 
