@@ -1,7 +1,7 @@
 /************************************************************************/
 /*																		*/
 /*	analogShield.h	--	Library for Analog Shield                       */
-/*     Version - 2.1                                                    */
+/*     Version - 2.2                                                    */
 /*																		*/
 /************************************************************************/
 /*	Author: 	William J. Esposito										*/
@@ -36,9 +36,10 @@
 /*	04/22/2014(WilliamE): Created										*/
 /*  05/27/2014(MarshallW): Modified for readability and content         */
 /*  02/16/2015(MarshallW): ChipKIT Efficiency update!                   */
+/*  06/20/2016(JonP): Added ChipKIT WI-Fire(PIC32MZ)                    */
 /*																		*/
 /*  Todo:                                                               */
-/*    - Framework for DUE ad ded but not tested                          */
+/*    - Framework for DUE added but not tested                          */
 /*																		*/
 /************************************************************************/
 
@@ -67,6 +68,22 @@ analogShield analog;
 */	
     #if defined(__PIC32MX__)
 	analogShield::analogShield() : 
+		ADCCSSet(portOutputRegister(digitalPinToPort(adccs)) + 2), 
+		ADCCSClr(portOutputRegister(digitalPinToPort(adccs)) + 1), 
+		ADCCSPinMask(digitalPinToBitMask(adccs)),  
+		
+		syncPinSet(portOutputRegister(digitalPinToPort(syncPin)) + 2), 
+		syncPinClr(portOutputRegister(digitalPinToPort(syncPin)) + 1), 
+		syncPinPinMask(digitalPinToBitMask(syncPin)),
+		
+		ldacPinSet(portOutputRegister(digitalPinToPort(ldacPin)) + 2), 
+		ldacPinClr(portOutputRegister(digitalPinToPort(ldacPin)) + 1), 
+		ldacPinPinMask(digitalPinToBitMask(ldacPin)),
+		
+		ADCBusyPtr(portInputRegister(digitalPinToPort(adcbusy))), 
+		ADCBusyPinMask(digitalPinToBitMask(adcbusy)) {
+	#elif defined(__PIC32MZ__)
+		analogShield::analogShield() : 
 		ADCCSSet(portOutputRegister(digitalPinToPort(adccs)) + 2), 
 		ADCCSClr(portOutputRegister(digitalPinToPort(adccs)) + 1), 
 		ADCCSPinMask(digitalPinToBitMask(adccs)),  
@@ -142,6 +159,8 @@ analogShield analog;
 	void analogShield::begin(){
 	#if defined(__PIC32MX__)	
 		SPI.begin();
+	#elif defined(__PIC32MZ__)	
+		SPI.begin();
 	#elif defined (__SAM3X8E__)	
 		SPI.begin();
 	#else //(__AVR__)
@@ -191,7 +210,7 @@ analogShield analog;
 **
 */	
 	void analogShield::end(){
-		#if defined(__PIC32MX__) || defined (__SAM3X8E__)
+		#if defined(__PIC32MX__) || defined (__SAM3X8E__) || defined(__PIC32MZ__)
 			SPI.end();
 		#else //(__AVR__)
 			SPCR &= ~_BV(SPE);
@@ -262,7 +281,7 @@ analogShield analog;
 		}
 		
 		
-		#if defined(__PIC32MX__) || defined(__SAM3X8E__)
+		#if defined(__PIC32MX__) || defined(__PIC32MZ__)|| defined(__SAM3X8E__)
 
 		SPI.transfer(control);
 
@@ -307,6 +326,8 @@ analogShield analog;
 		if(shieldMode != 2){
 			#if defined (__PIC32MX__)
 				SPI.setDataMode(SPI_MODE3);
+			#elif defined (__PIC32MZ__)
+				SPI.setDataMode(SPI_MODE3);	
 			#elif defined (__SAM3X8E__)
 				SPI.setDataMode(SPI_MODE3);
 			#else //(__AVR__)
@@ -318,11 +339,13 @@ analogShield analog;
 			shieldMode = 2;
 		}
 		
-		#if defined (__PIC32MX__) || (__SAM3X8E__)
+		#if defined (__PIC32MX__) || defined(__PIC32MZ__)|| (__SAM3X8E__)
 		// take the SS pin low to select the chip, transfer the command, then bring the bit back high:
 		
 		#if defined (__PIC32MX__)
 			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
+		#elif defined (__PIC32MZ__)
+			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);	
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr &= ClrADCCSPinMask;
 		#endif
@@ -330,6 +353,8 @@ analogShield analog;
 		setChannelAndModeByte(channel, mode);
 		
 		#if defined (__PIC32MX__)
+			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
+		#elif defined (__PIC32MZ__)
 			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr |= SetADCCSPinMask;
@@ -339,6 +364,8 @@ analogShield analog;
 		while(!(*ADCBusyPtr & ADCBusyPinMask)); //while(digitalRead(adcbusy) == 0); //wait for pin 3 to == 0
 			
 		#if defined (__PIC32MX__)
+			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
+		#elif defined (__PIC32MZ__)
 			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr &= ClrADCCSPinMask;
@@ -350,6 +377,8 @@ analogShield analog;
 		
 		//release chip select		
 		#if defined (__PIC32MX__)
+			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
+		#elif defined (__PIC32MZ__)
 			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr |= SetADCCSPinMask;
@@ -446,7 +475,7 @@ analogShield analog;
 	int analogShield::signedRead(int channel, bool mode) {
 		// initialize SPI:
 		if(shieldMode != 2){
-			#if defined (__PIC32MX__) || defined (__SAM3X8E__)
+			#if defined (__PIC32MX__) || defined (__PIC32MZ__) || defined (__SAM3X8E__)
 				SPI.setDataMode(SPI_MODE3);
 			#else //(__AVR__)
 				SPCR &= ~(_BV(DORD));
@@ -457,11 +486,13 @@ analogShield analog;
 			shieldMode = 2;
 		}
 		
-		#if defined (__PIC32MX__) || defined (__SAM3X8E__)
+		#if defined (__PIC32MX__) || defined (__PIC32MZ__) || defined (__SAM3X8E__)
 		// take the SS pin low to select the chip, transfer the command, then bring the bit back high:
 		
 		#if defined (__PIC32MX__)
 			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
+		#elif defined (__PIC32MZ__)
+			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);	
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr &= ClrADCCSPinMask;
 		#endif
@@ -469,6 +500,8 @@ analogShield analog;
 		setChannelAndModeByte(channel, mode);
 		
 		#if defined (__PIC32MX__)
+			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
+		#elif defined (__PIC32MZ__)
 			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr |= SetADCCSPinMask;
@@ -478,6 +511,8 @@ analogShield analog;
 		while(!(*ADCBusyPtr & ADCBusyPinMask)); //while(digitalRead(adcbusy) == 0); //wait for pin 3 to == 0
 		
 		#if defined (__PIC32MX__)
+			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
+		#elif defined (__PIC32MZ__)
 			*ADCCSClr = ADCCSPinMask;	//digitalWrite(adccs,LOW);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr &= ClrADCCSPinMask;
@@ -489,6 +524,8 @@ analogShield analog;
 		
 		//release chip select		
 		#if defined (__PIC32MX__)
+			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
+		#elif defined (__PIC32MZ__)
 			*ADCCSSet = ADCCSPinMask; 	//digitalWrite(adccs,HIGH);
 		#elif defined (__SAM3X8E__)
 			*ADCCSPtr |= SetADCCSPinMask;
@@ -565,6 +602,8 @@ analogShield analog;
 		// take the SS pin low to select the chip:
 		#if defined(__PIC32MX__)
 			*syncPinClr = syncPinPinMask;
+		#elif defined(__PIC32MZ__)
+			*syncPinClr = syncPinPinMask;
 		#elif defined (__SAM3X8E__)
 			*syncPinPtr &= ClrsyncPinPinMask;
 		#else
@@ -584,7 +623,7 @@ analogShield analog;
 			call = 0x06;
 		
 		//send command byte
-		#if defined(__PIC32MX__) || (__SAM3X8E__)
+		#if defined(__PIC32MX__) || (__SAM3X8E__) || (__PIC32MZ__)
 			SPI.transfer(call);
 		
 			//send data
@@ -594,6 +633,8 @@ analogShield analog;
 			// take the SS pin high to de-select the chip:
 			#if defined(__PIC32MX__)
 				*syncPinSet = syncPinPinMask;
+			#elif defined(__PIC32MZ__)
+				*syncPinSet = syncPinPinMask;	
 			#elif defined (__SAM3X8E__)
 				*syncPinPtr |= SetsyncPinPinMask;
 			#endif
@@ -645,6 +686,8 @@ analogShield analog;
 		// take the SS pin low to select the chip:
 		#if defined(__PIC32MX__)
 			*syncPinClr = syncPinPinMask;
+		#elif defined(__PIC32MZ__)
+			*syncPinClr = syncPinPinMask;	
 		#elif defined (__SAM3X8E__)
 			*syncPinPtr &= ClrsyncPinPinMask;
 		#else
@@ -664,7 +707,7 @@ analogShield analog;
 			call = 0x26;
 		
 		//send command byte
-		#if defined(__PIC32MX__) || defined (__SAM3X8E__)
+		#if defined(__PIC32MX__)|| defined(__PIC32MZ__) || defined (__SAM3X8E__)
 			SPI.transfer(call);
 		
 			//send data
@@ -674,6 +717,8 @@ analogShield analog;
 			// take the SS pin high to de-select the chip:
 			#if defined(__PIC32MX__)
 				*syncPinSet = syncPinPinMask;
+			#elif defined(__PIC32MZ__)
+				*syncPinSet = syncPinPinMask;	
 			#elif defined (__SAM3X8E__)
 				*syncPinPtr |= SetsyncPinPinMask;
 			#endif
@@ -721,7 +766,7 @@ analogShield analog;
 		if(shieldMode != 1)
 		{
 			// initialize SPI:
-			#if defined(__PIC32MX__) || defined (__SAM3X8E__)
+			#if defined(__PIC32MX__) ||defined(__PIC32MZ__)|| defined (__SAM3X8E__)
 				SPI.setBitOrder(MSBFIRST);
 				SPI.setDataMode(SPI_MODE1);
 				SPI.setClockDivider(SPI_CLOCK_DIV2);
@@ -740,6 +785,9 @@ analogShield analog;
 
 		// take the SS pin low to select the chip:
 		#if defined(__PIC32MX__)
+			*syncPinClr = syncPinPinMask;
+			*ldacPinClr = ldacPinPinMask;
+		#elif defined(__PIC32MZ__)
 			*syncPinClr = syncPinPinMask;
 			*ldacPinClr = ldacPinPinMask;
 		#elif defined (__SAM3X8E__)
@@ -761,7 +809,7 @@ analogShield analog;
 		else if(channel == 3)
 			call = 0x16;
 		
-		#if defined(__PIC32MX__) || (__SAM3X8E__)
+		#if defined(__PIC32MX__) ||(__PIC32MZ__)|| (__SAM3X8E__)
 			//send command byte
 			SPI.transfer(call);
 
@@ -772,6 +820,8 @@ analogShield analog;
 			// take the SS pin high to de-select the chip:
 			#if defined(__PIC32MX__)
 				*syncPinSet = syncPinPinMask;	//digitalWrite(syncPin,HIGH); 
+			#elif defined(__PIC32MZ__)
+				*syncPinSet = syncPinPinMask;	//digitalWrite(syncPin,HIGH); 	
 			#elif defined (__SAM3X8E__)
 				*syncPinPtr |= SetsyncPinPinMask;
 			#endif
@@ -825,7 +875,7 @@ analogShield analog;
 		if(shieldMode != 1)
 		{
 			// initialize SPI:
-			#if defined (__PIC32MX__) || (__SAM3X8E__)
+			#if defined (__PIC32MX__) ||(__PIC32MZ__) ||(__SAM3X8E__)
 				SPI.setDataMode(SPI_MODE1);
 			
 			#else  (__AVR__)
@@ -874,7 +924,7 @@ analogShield analog;
 	void analogShield::write(unsigned int value0, unsigned int value1, unsigned int value2, bool simul){
 		if(shieldMode != 1){
 			// initialize SPI:
-			#if defined (__PIC32MX__) || (__SAM3X8E__)
+			#if defined (__PIC32MX__) ||(__PIC32MZ__) || (__SAM3X8E__)
 				SPI.setDataMode(SPI_MODE1);
 			
 			#else  //(__AVR__)
@@ -929,7 +979,7 @@ analogShield analog;
 		if(shieldMode != 1)
 		{
 			// initialize SPI:
-			#if defined (__PIC32MX__) || (__SAM3X8E__)
+			#if defined (__PIC32MX__) ||(__PIC32MZ__) || (__SAM3X8E__)
 				SPI.setDataMode(SPI_MODE1);
 			
 			#else  //(__AVR__)

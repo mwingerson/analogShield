@@ -1,7 +1,7 @@
 /************************************************************************/
 /*																		*/
 /*	analogShield.h	--	Library for Analog Shield                       */
-/*     Version - 2.1                                                    */
+/*     Version - 2.2                                                    */
 /*																		*/
 /************************************************************************/
 /*	Author: 	William J. Esposito										*/
@@ -38,6 +38,7 @@
 /*  02/16/2015(MarshallW): ChipKIT Efficiency update!                   */
 /*  06/01/2015(GordonC):  Fixed issue for Uno compile.                  */
 /*                        Tested ramp example with DUE                  */
+/*  06/20/2016(JonP): Added ChipKIT WI-Fire(PIC32MZ)                    */
 /*																		*/
 /*  Todo:                                                               */
 /*    - Framework for DUE added but not tested                          */
@@ -54,7 +55,10 @@
 		#include <WProgram.h>
 		#include <inttypes.h>
 		#include <SPI.h>
-	
+	#elif defined(__PIC32MZ__)
+		#include <WProgram.h>
+		#include <inttypes.h>
+		#include <SPI.h>
 	#elif defined(__AVR__)
 		#include <stdio.h>
 		#include <Arduino.h>
@@ -109,6 +113,22 @@
 	public:
 	
     	#if defined(__PIC32MX__)
+		volatile uint32_t *ADCCSSet;
+		volatile uint32_t *ADCCSClr;
+		uint32_t ADCCSPinMask;
+	
+		volatile uint32_t *syncPinSet;
+		volatile uint32_t *syncPinClr;
+		uint32_t syncPinPinMask;
+		
+		volatile uint32_t *ldacPinSet;
+		volatile uint32_t *ldacPinClr;
+		uint32_t ldacPinPinMask;
+	
+		volatile uint32_t *ADCBusyPtr;
+		uint32_t ADCBusyPinMask;
+		
+		#elif defined(__PIC32MZ__)
 		volatile uint32_t *ADCCSSet;
 		volatile uint32_t *ADCCSClr;
 		uint32_t ADCCSPinMask;
