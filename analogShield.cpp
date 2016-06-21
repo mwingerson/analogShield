@@ -38,7 +38,7 @@
 /*  02/16/2015(MarshallW): ChipKIT Efficiency update!                   */
 /*																		*/
 /*  Todo:                                                               */
-/*    - Framework for DUE added but not tested                          */
+/*    - Framework for DUE ad ded but not tested                          */
 /*																		*/
 /************************************************************************/
 
